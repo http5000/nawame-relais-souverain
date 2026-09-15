@@ -79,7 +79,9 @@ export async function deriveKey(
   return s.deriveKey(
     {
       name: 'PBKDF2',
-      salt,
+      // Cast : @types/node type Uint8Array sur ArrayBufferLike (inclut SharedArrayBuffer),
+      // BufferSource attend ArrayBuffer. Le blob est toujours un vrai ArrayBuffer ici.
+      salt: salt as BufferSource,
       iterations: kdfParams.iterations,
       hash: kdfParams.hash,
     },
