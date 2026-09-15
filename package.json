@@ -24,5 +24,6 @@
   },
   "engines": {
     "node": ">=22"
-  }
+  },
+  "author": "HTTP5000 SAS"
 }
