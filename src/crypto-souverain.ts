@@ -107,7 +107,12 @@ export async function seal(plaintext: string, key: CryptoKey): Promise<Uint8Arra
   const s = subtle();
   const iv = crypto().getRandomValues(new Uint8Array(IV_LENGTH));
   const data = new TextEncoder().encode(plaintext);
-  const ciphertext = await s.encrypt({ name: 'AES-GCM', iv }, key, data);
+  // Copie EXPLICITE en ArrayBuffer (même précaution que le cast BufferSource du sel
+  // dans deriveKey) : @types/node type Uint8Array sur ArrayBufferLike, qui inclut
+  // SharedArrayBuffer, alors que WebCrypto attend un vrai ArrayBuffer. On ne laisse
+  // pas ce détail au hasard sur un IV : un IV mal transmis casserait le chiffrement.
+  const ivBuffer = new Uint8Array(iv).buffer as ArrayBuffer;
+  const ciphertext = await s.encrypt({ name: 'AES-GCM', iv: ivBuffer }, key, data);
   const blob = new Uint8Array(iv.length + ciphertext.byteLength);
   blob.set(iv, 0);
   blob.set(new Uint8Array(ciphertext), iv.length);

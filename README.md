@@ -94,6 +94,8 @@ transmises. Vercel les injecte dans le relais au démarrage, sans les afficher.
 2. Testez-la dans votre navigateur : elle doit afficher
    `{"relay":"nawame-relais-souverain","crypto":"active","configured":true,…}`.
    Si `crypto` n'est pas `"active"`, un secret manque (revoir l'étape 3).
+   Cette page ne dit rien d'autre : ni votre clé, ni votre passphrase, ni quel
+   secret manque. C'est voulu, elle est visible de tous.
 
 ### Étape 5 — Brancher votre IA sur le relais
 
@@ -107,6 +109,14 @@ Après :  https://mon-relais-nawame.vercel.app/api/mcp
 ```
 
 Gardez la même clé d'API que vous aviez déjà. C'est tout.
+
+**Important : cette clé est aussi le mot de passe de votre relais.** L'adresse de
+votre relais est publique (n'importe qui peut la deviner), donc le relais REFUSE
+toute requête qui n'apporte pas votre clé d'API Nawame (réponse « 401 »). Sans ce
+verrou, une personne qui connaîtrait l'adresse ferait déchiffrer vos mémoires par
+votre propre relais. Votre IA envoie déjà cette clé automatiquement : vous n'avez
+rien de plus à faire, mais ne publiez jamais votre clé, et ne la mettez pas dans
+une IA à laquelle vous ne voulez pas donner accès à vos mémoires.
 
 ### Étape 6 — Vérifier que ça marche
 
@@ -138,6 +148,42 @@ pas de secret dans un titre ou un tag.
 retrouver un morceau de texte dans du contenu chiffré. Pour modifier une mémoire,
 faites réécrire l'ensemble (l'IA utilise alors `update_entry`). L'ajout en fin de
 mémoire, lui, fonctionne normalement.
+
+**Le relais refuse ce qu'il ne connaît pas.** Le relais ne laisse passer que les
+outils qu'il a appris à traiter. Tout outil nouveau ou inconnu est **refusé**, et
+rien n'est envoyé à Nawame : mieux vaut un refus qu'un texte qui part en clair par
+surprise. Concrètement, votre IA vous dira « cet outil est indisponible via le
+relais ». Sont refusés aujourd'hui :
+
+- `replace_section` (le serveur devrait lire votre texte pour retrouver le passage) ;
+- `share_conversation` et `engrave_conversation` (partager ou graver s'adresse à
+  d'autres personnes, qui n'ont pas votre passphrase : le texte serait soit
+  illisible pour elles, soit lisible par Nawame) ;
+- `report_bug` et `submit_feedback` (ces textes sont destinés à l'équipe Nawame,
+  ils partiraient donc en clair ; passez par la console Nawame) ;
+- `unlock_souverain`, `lock_souverain`, `souverain_status` (ils appartiennent à
+  l'autre formule, celle où c'est le serveur qui chiffre : ils transporteraient
+  votre passphrase jusqu'à Nawame). Ces trois-là sont même retirés de la liste
+  des outils : votre IA ne les voit plus du tout.
+
+**Ce que le relais chiffre exactement.** Le texte de vos mémoires, le résumé des
+modifications, le corps de vos outils personnels, la description de vos dossiers
+racines, les motifs et notes que vous écrivez, et le descriptif de vos pointeurs
+de secrets. Restent en clair : titres, tags, noms de dossiers, dates, adresses
+e-mail, identifiants, et les mots-clés que vous tapez dans une recherche (le
+serveur ne peut de toute façon plus chercher dans le contenu chiffré : il ne
+retrouve que les titres et les tags).
+
+**Un contenu structuré est chiffré rubrique par rubrique.** Quand votre IA range
+une mémoire en rubriques (une décision avec son énoncé, ses motifs, les pistes
+écartées, une suite à donner…), le relais chiffre le **texte** de toutes les
+rubriques, y compris celles qu'il ne connaît pas et celles imbriquées les unes
+dans les autres. Il n'y a pas de liste de rubriques « à chiffrer » : le TEXTE de
+chaque rubrique est chiffré, à toute profondeur ; en revanche le NOM des
+rubriques, comme les titres et les tags, reste en clair : n'y mettez pas de
+secret. Et si votre IA envoie un champ sous une forme que le relais ne sait pas
+chiffrer, l'appel est **refusé** plutôt que transmis : elle vous dira que ce champ
+doit être du texte, et rien ne sera parti chez Nawame.
 
 ---
 
@@ -221,6 +267,8 @@ Vercel injects them into the relay at startup, without displaying them.
 2. Test it in your browser: it should show
    `{"relay":"nawame-relais-souverain","crypto":"active","configured":true,…}`.
    If `crypto` is not `"active"`, a secret is missing (redo Step 3).
+   That page says nothing else: not your key, not your passphrase, not which
+   secret is missing. That is on purpose, since anyone can open it.
 
 ### Step 5 — Point your AI at the relay
 
@@ -233,6 +281,14 @@ After:   https://my-nawame-relay.vercel.app/api/mcp
 ```
 
 Keep the same API key you already had. That's it.
+
+**Important: that key is also your relay's password.** Your relay address is
+public (anyone could guess it), so the relay REFUSES any request that does not
+carry your Nawame API key (it answers « 401 »). Without that lock, anyone knowing
+the address would have your own relay decrypt your memories for them. Your AI
+already sends the key automatically, so there is nothing more to do, but never
+publish your key, and do not put it in an AI you do not want to give access to
+your memories.
 
 ### Step 6 — Verify it works
 
@@ -263,25 +319,72 @@ is **disabled** through the relay: the server cannot find a piece of text inside
 encrypted content. To edit a memory, have the AI rewrite the whole thing (it then
 uses `update_entry`). Appending to the end of a memory works normally.
 
+**The relay refuses what it does not know.** The relay only lets through the tools
+it was taught to handle. Any new or unknown tool is **refused**, and nothing is
+sent to Nawame: better a refusal than text leaving in clear by surprise. Your AI
+will simply say "this tool is unavailable through the relay". Refused today:
+
+- `replace_section` (the server would have to read your text to find the passage);
+- `share_conversation` and `engrave_conversation` (sharing or engraving targets
+  other people, who do not have your passphrase: the text would be either
+  unreadable for them, or readable by Nawame);
+- `report_bug` and `submit_feedback` (these texts are meant for the Nawame team,
+  so they would leave in clear; use the Nawame console instead);
+- `unlock_souverain`, `lock_souverain`, `souverain_status` (they belong to the
+  other offer, the one where the server encrypts: they would carry your
+  passphrase all the way to Nawame). Those three are even removed from the tool
+  list: your AI does not see them at all.
+
+**What the relay encrypts, exactly.** The text of your memories, the change
+summaries, the body of your personal tools, the description of your root folders,
+the reasons and notes you write, and the description of your secret pointers.
+Left in clear: titles, tags, folder names, dates, e-mail addresses, identifiers,
+and the keywords you type in a search (the server cannot search encrypted content
+anyway: it only matches titles and tags).
+
+**Structured content is encrypted section by section.** When your AI files a
+memory into sections (a decision with its statement, its reasons, the options set
+aside, a next step…), the relay encrypts the **text** of every section, including
+the ones it does not know about and the ones nested inside others. There is no
+list of sections "to be encrypted": the TEXT of each section is encrypted, at any
+depth; the section NAMES, however, like titles and tags, stay in clear: do not put
+a secret in them. And if your AI sends a field in a shape the relay cannot
+encrypt, the call is **refused** rather than forwarded: it will tell you that
+field must be text, and nothing will have left for Nawame.
+
 ---
 
 ## Statut / Status
 
-v2. Le relais chiffre RÉELLEMENT. Le socle crypto (`src/crypto-souverain.ts`)
+v3. Le relais chiffre RÉELLEMENT. Le socle crypto (`src/crypto-souverain.ts`)
 est partagé avec Nawame (même code). La transformation MCP
 (`src/souverain-transform.ts`) **scelle** le contenu des écritures avant de les
 transmettre et **ouvre** le contenu chiffré des lectures au retour ; le proxy
 (`app/api/mcp/route.ts`) reste une fine couche HTTP. Périmètre : contenu chiffré,
-métadonnées (titres, tags, dossiers, dates) en clair. `replace_section` est
-refusé (fail-closed) faute de pouvoir chercher dans du chiffré.
+métadonnées (titres, tags, dossiers, dates) en clair.
 
-v2. The relay ACTUALLY encrypts. The crypto core (`src/crypto-souverain.ts`) is
+Nouveautés v3 : jeton d'accès entrant obligatoire (comparaison à temps constant),
+dialogue MCP complet (JSON et flux SSE), **refus par défaut** de tout outil non
+reconnu, outils de session souveraine refusés ET retirés du catalogue, résumés de
+modification scellés comme le contenu, **scellement en profondeur** de tout objet
+de contenu (toute clé, toute imbrication, tableaux compris), refus d'un champ à
+sceller qui n'est pas du texte, et jeton déjà scellé reconnu par **ouverture
+effective** (jamais sur sa seule apparence). Tests : `npm test` (sans dépendance,
+Node 22).
+
+v3. The relay ACTUALLY encrypts. The crypto core (`src/crypto-souverain.ts`) is
 shared with Nawame (same code). The MCP transform (`src/souverain-transform.ts`)
 **seals** write content before forwarding and **opens** encrypted read content on
 the way back; the proxy (`app/api/mcp/route.ts`) stays a thin HTTP layer. Scope:
 content encrypted, metadata (titles, tags, folders, dates) in clear.
-`replace_section` is refused (fail-closed) since encrypted content cannot be
-searched.
+
+New in v3: mandatory incoming access token (constant-time comparison), full MCP
+dialogue (JSON and SSE stream), **deny by default** for any unrecognized tool,
+sovereign-session tools refused AND removed from the catalog, change summaries
+sealed like content, **deep sealing** of any content object (every key, every
+nesting level, arrays included), refusal of a to-be-sealed field that is not text,
+and already-sealed tokens recognized by **actually opening them** (never by their
+shape alone). Tests: `npm test` (no dependency, Node 22).
 
 ## Licence / License
 
